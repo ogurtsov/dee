@@ -1,1 +1,69 @@
-<a href="{% url 'logout' %}">Logout</a>
+{% load i18n %}
+
+<html ng-app="App">
+  <head>
+    <title>Sauron Brought You Some Cookies</title>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+    <style type="text/css">
+      .messages-wrapper {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 300px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid" ng-controller="DashboardController">
+      <div class="col-md-2">
+        <div class="current-user">
+          <span class="glyphicon glyphicon-user"></span> {{request.user.username}}
+          <a href="{% url 'logout' %}">{% trans 'Logout' %}</a>
+        </div>
+        <div class="dir-opener">
+          <input type="text" ng-model="newDir" class="form-control">
+          <button class="btn btn-default" ng-click="openDir()">{% trans 'Open' %}</button>
+        </div>
+        <div>
+        <ul>
+          <li ng-repeat="msg in messages">[[msg.text]]</li>
+        </ul>
+        </div>
+      </div>
+      <div class="col-md-10">
+        editable tabs will go here
+      </div>
+    </div>
+
+    <div class="messages-wrapper">
+      <div class="alert alert-[[msg.type]] alert-dismissible" role="alert" ng-repeat="msg in messages">
+        <button type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">{% trans 'Close' %}</span></button>
+        [[msg.text]]
+      </div>
+    </div>
+
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.19/angular.min.js"></script>
+    <script type="text/javascript" charset="utf-8">
+      var app = angular.module('App', [])
+      app.config(function($interpolateProvider){
+        $interpolateProvider.startSymbol('[[')
+        $interpolateProvider.endSymbol(']]')
+      })
+
+      function DashboardController($scope){
+        $scope.newDir = '/home/dmitry/'
+        $scope.messages = []
+
+        $scope.addMessage = function(type, text){
+          $scope.messages.push({'type': type, 'text':text})
+        }
+
+        $scope.openDir = function(dir){
+          dir = dir || $scope.newDir
+          $scope.addMessage('warning', 'Something wrong happened')
+        }
+
+      }
+    </script>
+  </body>
+</html>

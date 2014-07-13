@@ -1,1 +1,32 @@
-login form page
+{% load i18n %}
+<html>
+  <head>
+    <title>Development Environment Environment</title>
+
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+
+    <style type="text/css">
+      form.form-signin {
+        width: 30%;
+        margin: 50px auto;
+      }
+    </style>
+
+  </head>
+  <body>
+    <div class="container">
+
+      <form class="form-signin" role="form" method="POST">
+        {% csrf_token %}
+        <input name="username" type="text" class="form-control" placeholder="Username" required autofocus>
+        <input name="password" type="password" class="form-control" placeholder="Password" required>
+        <button class="btn btn-lg btn-primary btn-block" type="submit">{% trans 'Sign In' %}</button>
+      </form>
+
+
+    </div> <!-- /container -->
+
+  <!-- Latest compiled and minified JavaScript -->
+  <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+  </body>
+</html>
