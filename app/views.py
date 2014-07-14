@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function, division, absolute_import, unicode_literals
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 from django.shortcuts import redirect, render, get_object_or_404
 from django.core.urlresolvers import reverse
 from django.contrib.auth import logout
@@ -9,8 +9,58 @@ from django.contrib.auth import authenticate, login
 from django.contrib import messages
 from django.utils.translation import ugettext_lazy as _
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+
+import os
+
 import logging
 logger = logging.getLogger(__name__)
+
+
+class Directories(APIView):
+
+    def _is_dir(self, path):
+        return os.path.isdir(path)
+
+    def get(self, request, *args, **kw):
+        result = {}
+        root = request.GET.get('dir')
+
+        if root is not None and self._is_dir(root):
+            logger.info(os.listdir(root))
+            result = {
+                'path': root,
+                'children': [{'type': 'file' if os.path.isfile(os.path.join(root, x)) else 'directory',
+                    'name': x,
+                    'path': os.path.join(root, x)} for x in os.listdir(root)]
+            }
+        else:
+            raise Http404
+        response = Response(result, status=status.HTTP_200_OK)
+        return response
+
+
+class Files(APIView):
+
+    def _is_file(self, path):
+        return os.path.isfile(path)
+
+    def get(self, request, *args, **kw):
+        result = {}
+        filepath = request.GET.get('path')
+        print(filepath)
+        if filepath is not None and self._is_file(filepath):
+            result = {
+                'path': filepath,
+                'name': filepath.split('/')[len(filepath.split('/')) - 1],
+                'content': open(filepath, 'r').read()
+            }
+        else:
+            raise Http404
+        response = Response(result, status=status.HTTP_200_OK)
+        return response
 
 
 def home(request):
@@ -20,7 +70,6 @@ def home(request):
         username = request.POST['username']
         password = request.POST['password']
         user = authenticate(username=username, password=password)
-        logger.info(user)
         if user is not None:
             login(request, user)
             return redirect(reverse('dashboard'))
