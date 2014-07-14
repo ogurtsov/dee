@@ -8,6 +8,7 @@ from django.contrib.auth import logout
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
 from django.utils.translation import ugettext_lazy as _
+from django.views.decorators.csrf import csrf_exempt
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -47,7 +48,7 @@ class Files(APIView):
     def _is_file(self, path):
         return os.path.isfile(path)
 
-    def get(self, request, *args, **kw):
+    def get(self, request, *args, **kwargs):
         result = {}
         filepath = request.GET.get('path')
         print(filepath)
@@ -61,6 +62,13 @@ class Files(APIView):
             raise Http404
         response = Response(result, status=status.HTTP_200_OK)
         return response
+
+    def post(self, request, *args, **kwargs):
+      return HttpResponse("{}")
+
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super(Files, self).dispatch(*args, **kwargs)
 
 
 def home(request):

@@ -37,6 +37,12 @@
         padding: 0;
         margin-left: 10px;
       }
+      .directory {
+        color: #5F4C0B;
+      }
+      .file {
+        color: #0B610B;
+      }
       .editor-wrapper {
         position: fixed;
         top: 10px;
@@ -63,7 +69,7 @@
       }
     </style>
   </head>
-  <body ng-controller="DashboardController">
+  <body ng-controller="DashboardController" ng-init="init()">
     <div class="container-fluid">
       <div class="col-sm-3 col-md-2 sidebar">
         <div class="current-user">
@@ -76,9 +82,9 @@
         </div>
         <div class="filebrowser">
           <ul>
-            <li ng-show="current.directories.length || current.files.length"><a href="#" ng-click="openDir(currentDir + '..')" onclick="return false"><span class="glyphicon glyphicon-folder-close"></span> ..</a></li>
-            <li ng-repeat="d in current.directories"><a href="#" ng-click="openDir(d.path)" onclick="return false"><span class="glyphicon glyphicon-folder-close"></span> [[d.name]]</a></li>
-            <li ng-repeat="f in current.files"><a href="#" ng-click="openFile(f.path)" onclick="return false"><span class="glyphicon glyphicon-file"></span> [[f.name]]</a></li>
+            <li ng-show="current.directories.length || current.files.length"><a href="#" ng-click="goBack()" onclick="return false" class="directory"><span class="glyphicon glyphicon-folder-close"></span> ..</a></li>
+            <li ng-repeat="d in current.directories"><a href="#" ng-click="openDir(d.path)" onclick="return false" class="directory"><span class="glyphicon glyphicon-folder-close"></span> [[d.name]]</a></li>
+            <li ng-repeat="f in current.files"><a href="#" ng-click="openFile(f.path)" onclick="return false" class="file"><span class="glyphicon glyphicon-file"></span> [[f.name]]</a></li>
           </ul>
         </div>
       </div>
@@ -87,7 +93,7 @@
           <ul class="nav nav-tabs" role="tablist">
             <li ng-class="{active: f.path==file.path}" ng-dblclick="closeFile($index)" ng-click="setFile($index)" ng-repeat="f in opened_files"><a href="#home" role="tab" onclick="return false" data-toggle="tab">[[f.name]]</a></li>
           </ul>
-          <div on-save="saveFile()" ng-show="f.path==file.path" ng-repeat="f in opened_files" class="editor" id="[[f.name]]" contenteditable="contenteditable" ng-model="f.content"></div>
+          <div on-save="saveFile()" ng-show="f.path==file.path" ng-repeat="f in opened_files" class="editor" id="[[f.name]]" contenteditable="contenteditable" ng-bind="f.content"></div>
           <div class="status-bar">
             opening file
           </div>
@@ -184,6 +190,13 @@ app.directive('contenteditable', function() {
 
         var Directory = $resource('/api/v1.0/directory/?format=json&dir=:dir')
         var File = $resource('/api/v1.0/file/?format=json&path=:path')
+
+        $scope.init = function(){
+          if($scope.currentDir != ''){
+            $scope.openDir()
+          }
+        }
+
         $scope.addMessage = function(type, text){
           $scope.messages.push({'type': type, 'text':text})
         }
@@ -194,6 +207,7 @@ app.directive('contenteditable', function() {
 
         $scope.saveFile = function(){
           console.log('save called')
+          $scope.file.$save()
         }
 
         $scope.openFile = function(path){
@@ -249,10 +263,21 @@ app.directive('contenteditable', function() {
           $scope.opened_files.splice(index, 1)
         }
 
+        $scope.goBack = function(){
+          if($scope.currentDir != '/'){
+            var dir_chain = $scope.currentDir.split('/')
+            dir_chain.splice(dir_chain.length - 2, 2)
+            $scope.openDir(dir_chain.join('/'))
+          }
+        }
+
         $scope.openDir = function(_dir){
-          _dir = _dir || $scope.currentDir
-          $scope.currentDir = _dir
-          Directory.get({'dir': _dir})
+          $scope.currentDir = _dir || $scope.currentDir
+          if($scope.currentDir[$scope.currentDir.length-1] != '/'){
+            $scope.currentDir += '/'
+          }
+          location.hash = $scope.currentDir
+          Directory.get({'dir': $scope.currentDir})
             .$promise.then(function(data){
                 $scope.current.directories = []
                 $scope.current.files = []

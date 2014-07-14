@@ -1,6 +1,7 @@
 from django.conf.urls import patterns, include, url
 from django.contrib.auth.decorators import login_required
 from django.conf.urls.static import static
+from django.views.decorators.csrf import csrf_exempt
 import views
 import settings
 
@@ -14,7 +15,7 @@ urlpatterns = patterns('',
     url(r'^accounts/logout/$', 'django.contrib.auth.views.logout',{'next_page': '/'}, name="logout"),
     url(r'^api/v1.0/directory/(?P<resource_id>\d+)[/]?$', login_required(views.Directories.as_view()), name='my_rest_view'),
     url(r'^api/v1.0/directory[/]?$', login_required(views.Directories.as_view()), name='my_rest_view'),
-    url(r'^api/v1.0/file/(?P<resource_id>\d+)[/]?$', login_required(views.Files.as_view()), name='my_rest_view'),
+    url(r'^api/v1.0/file/(?P<resource_id>\d+)[/]?$', csrf_exempt(login_required(views.Files.as_view())), name='my_rest_view'),
     url(r'^api/v1.0/file[/]?$', login_required(views.Files.as_view()), name='my_rest_view'),
     url(r'^admin/', include(admin.site.urls)),
 ) + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
