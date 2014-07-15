@@ -9,66 +9,68 @@ from django.contrib.auth import authenticate, login
 from django.contrib import messages
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
+from .helpers import *
 
 import os
+from operator import itemgetter
 
 import logging
 logger = logging.getLogger(__name__)
 
 
-class Directories(APIView):
+@login_required
+@csrf_exempt
+def api_router(request, resource):
+    resource_fn = {
+      'file': file_api,
+      'directory': dir_api
+    }.get(resource, placeholder)
+    return resource_fn(request)
 
-    def _is_dir(self, path):
-        return os.path.isdir(path)
+def placeholder(request):
+    return json_response({'msg': 'wrong resource'})
 
-    def get(self, request, *args, **kw):
-        result = {}
-        root = request.GET.get('dir')
-
-        if root is not None and self._is_dir(root):
-            logger.info(os.listdir(root))
-            result = {
-                'path': root,
-                'children': [{'type': 'file' if os.path.isfile(os.path.join(root, x)) else 'directory',
-                    'name': x,
-                    'path': os.path.join(root, x)} for x in os.listdir(root)]
-            }
-        else:
-            raise Http404
-        response = Response(result, status=status.HTTP_200_OK)
-        return response
-
-
-class Files(APIView):
-
-    def _is_file(self, path):
-        return os.path.isfile(path)
-
-    def get(self, request, *args, **kwargs):
-        result = {}
+def file_api(request):
+    response = {}
+    if request.method == 'GET':
         filepath = request.GET.get('path')
-        print(filepath)
-        if filepath is not None and self._is_file(filepath):
-            result = {
+        if filepath is not None and is_file(filepath):
+            response = {
                 'path': filepath,
                 'name': filepath.split('/')[len(filepath.split('/')) - 1],
                 'content': open(filepath, 'r').read()
             }
         else:
             raise Http404
-        response = Response(result, status=status.HTTP_200_OK)
-        return response
+    elif request.method == 'POST':
+        data = PayloadParser(request.body)
+        path = data.get('path')
+        content = data.get('content')
+        name = data.get('name')
+        with open(path, 'w') as file:
+            file.write(content)
+            file.close()
+            response = {'msg': 'Ok'}
+    return json_response(response)
 
-    def post(self, request, *args, **kwargs):
-      return HttpResponse("{}")
-
-    @csrf_exempt
-    def dispatch(self, *args, **kwargs):
-        return super(Files, self).dispatch(*args, **kwargs)
+def dir_api(request):
+    response = {}
+    if request.method == 'GET':
+        root = request.GET.get('dir')
+        if root is not None and is_dir(root):
+            children = [{'type': 'file' if is_file(os.path.join(root, x)) else 'directory',
+                    'name': x,
+                    'path': os.path.join(root, x)} for x in os.listdir(root)]
+            children = sorted(children, key=itemgetter('name')) 
+            response = {
+                'path': root,
+                'children': children
+            }
+        else:
+            raise Http404
+    return json_response(response)
 
 
 def home(request):

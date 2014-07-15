@@ -8,6 +8,7 @@
     <style type="text/css">
       .messages-wrapper {
         position: absolute;
+        z-index: 1001;
         top: 10px;
         right: 10px;
         width: 300px;
@@ -91,11 +92,11 @@
       <div class="col-md-10">
         <div ng-show="opened_files.length" class="editor-wrapper">
           <ul class="nav nav-tabs" role="tablist">
-            <li ng-class="{active: f.path==file.path}" ng-dblclick="closeFile($index)" ng-click="setFile($index)" ng-repeat="f in opened_files"><a href="#home" role="tab" onclick="return false" data-toggle="tab">[[f.name]]</a></li>
+            <li ng-class="{active: f.path==file.path}" ng-dblclick="closeFile($index)" ng-click="setFile($index)" ng-repeat="f in opened_files"><a href="#home" role="tab" onclick="return false" data-toggle="tab"><span ng-show="f.updated" class="glyphicon glyphicon-folder-close"></span>[[f.name]]</a></li>
           </ul>
-          <div on-save="saveFile()" ng-show="f.path==file.path" ng-repeat="f in opened_files" class="editor" id="[[f.name]]" contenteditable="contenteditable" ng-bind="f.content"></div>
+          <div on-save="saveFile()" ng-show="f.path==file.path" ng-repeat="f in opened_files" class="editor" id="[[f.name]]" ui-ace="{theme:'monokai', mode:getAceMode(f.name), onLoad : aceLoaded}" ng-model="f.content"></div>
           <div class="status-bar">
-            opening file
+            [[file.path]]
           </div>
         </div>
       </div>
@@ -111,8 +112,9 @@
     <script type="text/javascript" charset="utf-8" src="//cdnjs.cloudflare.com/ajax/libs/ace/1.1.3/ace.js"></script>
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.19/angular.min.js"></script>
     <script type="text/javascript" src="{% static 'js/angular-resource.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/ui-ace.js' %}"></script>
     <script type="text/javascript" charset="utf-8">
-      var app = angular.module('App', ['ngResource'])
+      var app = angular.module('App', ['ngResource', 'ui.ace'])
       app.config(function($interpolateProvider){
         $interpolateProvider.startSymbol('[[')
         $interpolateProvider.endSymbol(']]')
@@ -142,42 +144,6 @@
         }
       })
 
-app.directive('contenteditable', function() {
-	/**
-	* makes it possible to use <div contenteditable></div>
-	* as input field for angular models
-	*/
-    return {
-      restrict: 'A', // only activate on element attribute
-      require: '?ngModel', // get a hold of NgModelController
-      link: function(scope, element, attrs, ngModel) {
-        if(!ngModel) return; // do nothing if no ng-model
-
-        // Specify how UI should be updated
-        ngModel.$render = function() {
-          element.html(ngModel.$viewValue || '');
-        };
-
-        // Listen for change events to enable binding
-        element.on('blur keyup change', function() {
-          scope.$apply(read);
-        });
-        read(); // initialize
-
-        // Write data to the model
-        function read() {
-          var html = element.html();
-          // When we clear the content editable the browser leaves a <br> behind
-          // If strip-br attribute is provided then we strip this out
-          if( attrs.stripBr && html == '<br>' ) {
-            html = '';
-          }
-          ngModel.$setViewValue(html);
-        }
-      }
-    };
-  });
-
       function DashboardController($scope, $http, $resource){
         $scope.currentDir = location.hash.replace('#', '')
         $scope.messages = []
@@ -188,8 +154,8 @@ app.directive('contenteditable', function() {
           'files': []
         }
 
-        var Directory = $resource('/api/v1.0/directory/?format=json&dir=:dir')
-        var File = $resource('/api/v1.0/file/?format=json&path=:path')
+        var Directory = $resource('/api/directory/?dir=:dir')
+        var File = $resource('/api/file/?path=:path')
 
         $scope.init = function(){
           if($scope.currentDir != ''){
@@ -206,8 +172,8 @@ app.directive('contenteditable', function() {
         }
 
         $scope.saveFile = function(){
-          console.log('save called')
-          $scope.file.$save()
+            $scope.file.updated = false
+            $scope.file.$save()
         }
 
         $scope.openFile = function(path){
@@ -225,23 +191,28 @@ app.directive('contenteditable', function() {
             })
         }
 
-        $scope.initEditor = function(filename){
-          var ext = filename.split('.')[filename.split('.').length - 1]
-          var modes = {
-            'py': 'python',
-            'js': 'javascript',
-            'rb': 'ruby',
-            'html': 'html',
-            'php': 'php'
-          }
-          setTimeout(function(){
-            var editor = ace.edit(filename)
-            editor.setOptions({
-              fontSize: "11pt"
-            })
-            editor.setTheme("ace/theme/monokai")
-            editor.getSession().setMode("ace/mode/" + modes[ext])
-          }, 30)
+        $scope.getAceMode = function(filename){
+            var ext = filename.split('.')[filename.split('.').length - 1]
+            var modes = {
+                'py': 'python',
+                'js': 'javascript',
+                'rb': 'ruby',
+                'html': 'html',
+                'php': 'php'
+              }
+            return modes[ext]
+        }
+
+        $scope.aceLoaded = function(_editor) {
+          console.log(_editor)
+          _editor.setOptions({
+            fontSize: "11pt",
+            enableBasicAutocompletion: true
+          })
+        }
+
+        $scope.aceChanged = function(e) {
+            $scope.file.updated = true
         }
 
         $scope.setFile = function(index){
@@ -249,10 +220,13 @@ app.directive('contenteditable', function() {
             index = $scope.opened_files.length - 1
           }
           $scope.file = $scope.opened_files[index]
-          $scope.initEditor($scope.file.name)
+          //$scope.initEditor($scope.file.name)
         }
 
         $scope.closeFile = function(index){
+            if(!confirm('All changes will be lost')){
+                return false
+            }
           if($scope.file.name == $scope.opened_files[index].name){
             if($scope.opened_files.length > 1 && index == 0){
               $scope.file = $scope.opened_files[1]
