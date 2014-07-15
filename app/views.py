@@ -88,5 +88,6 @@ def home(request):
     return render(request, 'login-form.html', locals())
 
 
+@login_required
 def dashboard(request):
     return render(request, 'dashboard.html', locals())
