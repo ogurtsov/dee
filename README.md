@@ -1,5 +1,5 @@
 DEE: Environment Environment (self-hosted coding environment)
-======
+=
 In my daily work I always meet situations when you can't reproduce project's 
 environment on the local machine in reasonable timeframes. In most cases 
 I used nano/vim directly on server, but sometimes you need something more 
@@ -8,7 +8,7 @@ and then used as server-hosted IDE.
 
 
 Installation
-======
+=
 1) sudo apt-get install python-virtualenv python-pip
 2) git clone https://github.com/ogurtsov/dee.git
 3) cd dee
