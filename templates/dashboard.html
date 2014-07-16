@@ -68,6 +68,9 @@
         right: 0;
         font-size: 0.8em;
       }
+        .position-fixed {
+            position: fixed;
+        }
     </style>
   </head>
   <body ng-controller="DashboardController" ng-init="init()">
@@ -84,8 +87,16 @@
         <div class="filebrowser">
           <ul>
             <li ng-show="current.directories.length || current.files.length"><a href="#" ng-click="goBack()" onclick="return false" class="directory"><span class="glyphicon glyphicon-folder-close"></span> ..</a></li>
-            <li ng-repeat="d in current.directories"><a href="#" ng-click="openDir(d.path)" onclick="return false" class="directory"><span class="glyphicon glyphicon-folder-close"></span> [[d.name]]</a></li>
-            <li ng-repeat="f in current.files"><a href="#" ng-click="openFile(f.path)" onclick="return false" class="file"><span class="glyphicon glyphicon-file"></span> [[f.name]]</a></li>
+            <li ng-repeat="d in current.directories">
+                <a ng-context-menu="dirOptions" onclick="return false" class="directory" data-target="cm-d-[[d.name]]">
+                    <span class="glyphicon glyphicon-folder-close"></span> [[d.name]]
+                </a>
+            </li>
+            <li ng-repeat="f in current.files">
+                <a ng-context-menu="fileOptions" href="#" ng-click="openFile(f.path)" onclick="return false" class="file">
+                    <span class="glyphicon glyphicon-file"></span> [[f.name]]
+                </a>
+            </li>
           </ul>
         </div>
       </div>
@@ -108,13 +119,16 @@
         [[m.text]]
       </div>
     </div>
-
+    
+    <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
     <script type="text/javascript" charset="utf-8" src="//cdnjs.cloudflare.com/ajax/libs/ace/1.1.3/ace.js"></script>
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.19/angular.min.js"></script>
     <script type="text/javascript" src="{% static 'js/angular-resource.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/ng-context-menu.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/ui-ace.js' %}"></script>
     <script type="text/javascript" charset="utf-8">
-      var app = angular.module('App', ['ngResource', 'ui.ace'])
+      var app = angular.module('App', ['ngResource', 'ui.ace', 'ng-context-menu'])
       app.config(function($interpolateProvider){
         $interpolateProvider.startSymbol('[[')
         $interpolateProvider.endSymbol(']]')
@@ -143,6 +157,72 @@
 
         }
       })
+
+    app.directive('ngContextMenu', function ($parse) {
+        var renderContextMenu = function ($scope, event, options) {
+            if (!$) { var $ = angular.element; }
+            $(event.target).addClass('context');
+            var $contextMenu = $('<div>');
+            $contextMenu.addClass('dropdown clearfix');
+            var $ul = $('<ul>');
+            $ul.addClass('dropdown-menu');
+            $ul.attr({ 'role': 'menu' });
+            $ul.css({
+                display: 'block',
+                position: 'absolute',
+                left: event.pageX + 'px',
+                top: event.pageY + 'px'
+            });
+            angular.forEach(options, function (item, i) {
+                var $li = $('<li>');
+                if (item === null) {
+                    $li.addClass('divider');
+                } else {
+                    $a = $('<a>');
+                    $a.attr({ tabindex: '-1', href: '#' });
+                    $a.text(item[0]);
+                    $li.append($a);
+                    $li.on('click', function () {
+                        $scope.$apply(function() {
+                            item[1].call($scope, $scope);
+                        });
+                    });
+                }
+                $ul.append($li);
+            });
+            $contextMenu.append($ul);
+            $contextMenu.css({
+                width: '100%',
+                height: '100%',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                zIndex: 9999
+            });
+            $(document).find('body').append($contextMenu);
+            $contextMenu.on("click", function (e) {
+                $(event.target).removeClass('context');
+                $contextMenu.remove();
+            }).on('contextmenu', function (event) {
+                $(event.target).removeClass('context');
+                event.preventDefault();
+                $contextMenu.remove();
+            });
+        };
+        return function ($scope, element, attrs) {
+            element.on('contextmenu', function (event) {
+                $scope.$apply(function () {
+                    event.preventDefault();
+                    var options = $scope.$eval(attrs.ngContextMenu);
+                    if (options instanceof Array) {
+                        renderContextMenu($scope, event, options);
+                    } else {
+                        throw '"' + attrs.ngContextMenu + '" not an array';                    
+                    }
+                });
+            });
+        };
+    });
 
       function DashboardController($scope, $http, $resource){
         $scope.currentDir = location.hash.replace('#', '')
@@ -264,6 +344,34 @@
                 $scope.addMessage('danger', 'Directory doesn\'t exist of you don\'t have access to it')
             })
         }
+        
+        $scope.dirOptions = [
+            ['New File', function ($dirScope) {
+                //$dirScope.d
+            }],
+            null,
+            ['New Folder', function ($dirScope) {
+                //$dirScope.d
+            }],
+            null,
+            ['Rename', function ($dirScope) {
+                //$dirScope.d
+            }],
+            null,
+            ['Delete', function ($dirScope) {
+                //$dirScope.d
+            }]
+        ]
+        
+        $scope.fileOptions = [
+            ['Rename', function ($fileScope) {
+                //$fileScope.f
+            }],
+            null,
+            ['Delete', function ($fileScope) {
+                //$fileScope.f
+            }]
+        ]
 
       }
     </script>
