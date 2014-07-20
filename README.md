@@ -18,3 +18,8 @@ and then used as server-hosted IDE.
 7. ./manage.py syncdb (create a user with a strong password there)
 8. ./manage.py 0.0.0.0:8000 (or use your IP instead of 0.0.0.0 to make it more secure)
 9. access the DEE on http://example.com:8000/
+
+
+
+
+#####It's under active development so there still might be some bugs. Please don't forget to keep your code backed up!
