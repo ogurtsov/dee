@@ -124,7 +124,11 @@
 
         $scope.saveFile = function(){
             $scope.file.updated = false
-            $scope.file.$save()
+            $scope.file.$save({}, function(data,headers){
+                alert('success')
+            }, function(data,headers){
+                alert('failed')
+            })
         }
 
         $scope.openFile = function(path){
